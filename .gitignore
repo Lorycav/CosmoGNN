@@ -3,3 +3,6 @@ __pycache__/
 
 # Ignore Mac OS system files
 .DS_Store
+
+#
+Plots/Graphs/*.png
