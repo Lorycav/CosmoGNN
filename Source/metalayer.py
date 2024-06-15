@@ -23,7 +23,6 @@ class EdgeModel(torch.nn.Module):
 
         layers = [
             Linear(node_in*2 + edge_in, hid_channels), 
-            #ReLU(),
             GELU(),
             Linear(hid_channels, edge_out)
             ]
@@ -34,7 +33,7 @@ class EdgeModel(torch.nn.Module):
         # defining torch model
         self.edge_mlp = Sequential(*layers)
 
-    def forward(self, src, dest, edge_attr, u , batch):
+    def forward(self, src, dest, edge_attr):
         # src: edge start
         # dest: edge end
         # src, dest: tensors of shape [E, F_x], where E is the number of edges
@@ -53,9 +52,12 @@ class EdgeModel(torch.nn.Module):
 
         return out
 
+
+
 # Model for updating node attritbutes
+
 class NodeModel(torch.nn.Module):
-    def __init__(self, node_in, node_out, edge_in, edge_out, hid_channels, residuals=True, norm=True):
+    def __init__(self, node_in, node_out, edge_out, hid_channels, residuals=True, norm=True):
         super().__init__()
 
         self.residuals = residuals
@@ -63,7 +65,6 @@ class NodeModel(torch.nn.Module):
 
         layers = [
             Linear(node_in + 3*edge_out + 1, hid_channels),
-            #ReLU(),
             GELU(),
             Linear(hid_channels, node_out)
             ]
@@ -98,6 +99,7 @@ class NodeModel(torch.nn.Module):
             out = out + x
 
         return out
+    
 
 # Graph Neural Network architecture, based on the Graph Network (arXiv:1806.01261)
 # Employing the MetaLayer implementation in Pytorch-Geometric
@@ -134,7 +136,7 @@ class GNN(torch.nn.Module):
         edge_in = edge_out
 
         # Hidden graph blocks
-        for i in range(n_layers-1):
+        for _ in range(n_layers-1):
 
             lay = MetaLayer(
                 node_model=NodeModel(node_in, node_out, edge_in, edge_out, hid_channels, residuals=residuals),
@@ -146,18 +148,14 @@ class GNN(torch.nn.Module):
         # holding submodules in a list
         self.layers = ModuleList(layers)
 
-        # Final aggregation layer --> we can exploit it
+        # Final aggregation layer 
         self.outlayer = Sequential(
             Linear(3*node_out+1, hid_channels),
-            #ReLU(),
             GELU(),
             Linear(hid_channels, hid_channels),
-            #ReLU(),
             GELU(),
             Linear(hid_channels, hid_channels),
-            #ReLU(),
             GELU(),
-            #Softplus(),
             Linear(hid_channels, self.dim_out),
             Softplus()
             )
@@ -167,7 +165,7 @@ class GNN(torch.nn.Module):
         # Retrieving data
         h, edge_index, edge_attr, u = data.x, data.edge_index, data.edge_attr, data.u
 
-        # Message passing layers fa il loop di tutti gli hidden blocks
+        # Message passing layers
         for layer in self.layers:
             h, edge_attr, _ = layer(h, edge_index, edge_attr, u, data.batch)
 
@@ -182,8 +180,6 @@ class GNN(torch.nn.Module):
         alpha = 0.85     # variance factor to help training
         out = self.outlayer(out)
         out[:, 1] = alpha * out[:, 1]
-        # rendere la varianza positiva --> softplus
-        #out[:, 1] = self.softplus(out[:, 1])
-
+    
         return out
 
