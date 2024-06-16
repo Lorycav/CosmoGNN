@@ -16,7 +16,7 @@ groups_002
 ```
 
 ## Requisites
-The code runs on GPU. The one used for this work is a \textit{Tesla T4}.
+The code runs on GPU. The one used for this work is a _Tesla T4_.
 
 Libraries:
 * ```numpy```
