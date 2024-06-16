@@ -29,40 +29,31 @@ def objective(trial):
     weight_decay = trial.suggest_float("weight_decay", 1e-8, 1e-4, log=True)
     n_layers = trial.suggest_int("n_layers", 1, 4)
     hidden_channels = trial.suggest_categorical("hidden_channels", [8, 16, 32, 64])
-    # r_link = trial.suggest_float("r_link", 8.e-2, 2.6e-1, log=True)
 
     # Some verbose
     print('\nTrial number: {}'.format(trial.number))
     print('\tlearning_rate: {}'.format(learning_rate))
-    #print('\tgamma_lr: {}'.format(gamma_lr))
     print('\tT_max: {}'.format(T_max))
     print('\tweight_decay: {}'.format(weight_decay))
     print('\tn_layers:  {}'.format(n_layers))
     print('\thidden_channels:  {}'.format(hidden_channels))
-    # print('\tr_link:  {}'.format(r_link))
 
     # Hyperparameters to be optimized
     hparams.learning_rate = learning_rate
-    #hparams.gamma_lr = gamma_lr
     hparams.T_max = T_max
     hparams.weight_decay = weight_decay
     hparams.n_layers = n_layers
     hparams.hidden_channels = hidden_channels
-    # hparams.r_link = r_link
 
     # Run main routine
     min_val_loss, chi2s = main(hparams, verbose=True)
-    #min_test_loss = main(hparams, verbose=True)
 
     if torch.cuda.is_available():
         torch.cuda.empty_cache()
 
     return min_val_loss, chi2s
-    #return min_test_loss
-
 
 # --- MAIN ---#
-
 if __name__ == "__main__":
 
     time_ini = time.time()
@@ -81,10 +72,8 @@ if __name__ == "__main__":
     study = optuna.create_study(directions=['minimize', 'minimize'], study_name=study_name, sampler=sampler, storage=storage, load_if_exists=False)
     study.optimize(objective, n_trials, gc_after_trial=True)
 
-    # Print info for best trial --------> CHOOSE
-    trial = min(study.best_trials, key=lambda t: t.values[1]) # if we want trial with minimum chi2
-    #trial = min(study.best_trials, key=lambda t: t.values[0]) # if we want trial with minimum val_loss
-    #trial = study.best_trial
+    # Print info for best trial 
+    trial = min(study.best_trials, key=lambda t: t.values[0]) # show best trial ------> t.values[0] for val loss,  t.values[1] for chi 
     print("Best trial:")
     print("  Validation loss Value: ", trial.values[0])
     print("  Chi2 Value: ", trial.values[1])
@@ -93,12 +82,10 @@ if __name__ == "__main__":
         print("    {}: {}".format(key, value))
 
     hparams.learning_rate = trial.params["learning_rate"]
-    # hparams.gamma_lr = trial.params['gamma_lr']
     hparams.T_max = trial.params['T_max']
     hparams.weight_decay = trial.params["weight_decay"]
     hparams.n_layers = trial.params["n_layers"]
     hparams.hidden_channels = trial.params["hidden_channels"]
-    # hparams.r_link = trial.params["r_link"]
 
     # Save best model 
     best_hpars_file = 'best_hparams.pkl'
@@ -106,11 +93,10 @@ if __name__ == "__main__":
         pickle.dump(hparams, file)
 
     # Visualization of optimization results (with optuna functions)
-
     fig = plot_optimization_history(study, target=lambda t: t.values[0])
     fig.write_image("Plots/optuna_optimization_history.png", width = 1200, height = 800)
-
-    fig = plot_contour(study, target=lambda t: t.values[0])#, params=["learning_rate", "weight_decay", "r_link"])#, "use_model"])
+    
+    fig = plot_contour(study, target=lambda t: t.values[0])
     fig.write_image("Plots/optuna_contour.png", width = 1200, height = 800)
 
     fig = plot_param_importances(study, target=lambda t: t.values[0])
