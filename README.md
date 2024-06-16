@@ -1,5 +1,52 @@
 # CosmoGNN
-Final project of course LCP mod B. Estimation of cosmological parameter $\Omega_m$ from Quijote simulations using Graph Neural Networks.
+Estimation of cosmological parameter $\Omega_m$ from [Quijote simulations](https://quijote-simulations.readthedocs.io/en/latest/) using Graph Neural Networks.
+
+<p align="center">
+<img src="https://github.com/LauraRavagnani/CosmoGNN/assets/137277088/1227baa5-f036-4c44-b6da-3133325908b9" width=500>
+</p>
+
+## Data
+The data used in this work can be retrieved from [globus](https://app.globus.org/file-manager?origin_id=e0eae0aa-5bca-11ea-9683-0e56c063f437&origin_path=%2F) following the path:
+```console
+Halos/FoF/latin_hypercube/
+```
+selecting for each simulation number, the folder with redshift $z = 1$:
+```console
+groups_002
+```
+
+## Requisites
+The code runs on GPU. The one used for this work is a \textit{Tesla T4}.
+
+Libraries:
+* ```numpy```
+* ```pytorch```
+* ```pytorch-geometric```
+* ```matplotlib```
+* ```scipy```
+* ```sklearn```
+* ```optuna``` 
+
+## Scripts
+* ```clean_main.py```: main driver to train and test the network
+
+* ```clean_hyperparameters.py```: definition of the hyperparameters employed by the networks
+
+* ```clean_gridsearch.py```: optimize the hyperparameters using optuna
+
+* ```visualize_graphs.py```: display graphs of DM halos from the simulations
+
+The folder Source contains:
+
+* ```constants.py```: basic constants and initialization
+
+* ```load_data.py```: routines to load data from simulation files
+
+* ```plotting.py```: functions for displaying the results from the training and test
+
+* ```metalayer.py```: definition of the Graph Neural Network architecture
+
+* ```training.py```: routines for training and testing the network
 
 ## Citations
 This work is based on:
