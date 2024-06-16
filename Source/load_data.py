@@ -11,7 +11,7 @@ import scipy.spatial as SS
 import readfof
 import pickle
 
-# Normalize QUIJOTE parameters --> WHY? HOW IS IT USEFUL?
+# Normalize QUIJOTE parameters
 def normalize_params(params):
 
     minimum = np.array([0.1, 0.5])
@@ -62,7 +62,6 @@ def get_edges(pos, r_link):
     num_pairs = edge_index.shape[1]
 
     # 2. Get edge attributes
-
     row, col = edge_index
 
     # Calculating distance between linked halo pairs
@@ -80,7 +79,7 @@ def get_edges(pos, r_link):
     # Centroid of halo catalogue (3d position of the centroid)
     centroid = np.mean(pos,axis=0)
 
-    # Vectors of node and neighbor --> ??
+    # Vectors of node and neighbor
     # distance between each point and the centroid
     row = (pos[row] - centroid)
     col = (pos[col] - centroid)
@@ -114,44 +113,10 @@ def get_edges(pos, r_link):
         loops[0,i], loops[1,i] = i, i
         atrloops[i,0], atrloops[i,1], atrloops[i,2] = 0., 1., 0.
     edge_index = np.append(edge_index, loops, 1)
-    edge_attr = np.append(edge_attr, atrloops, 0)
-    
+    edge_attr = np.append(edge_attr, atrloops, 0)  
     edge_index = edge_index.astype(int)
 
     return edge_index, edge_attr
-
-# def find_cutmass():
-#   simnumber = np.arange(0,2000)
-#   simnumber = simnumber.astype(str).tolist()#
-#   cutmin = 1e50
-#  
-#   for numsim, sim in enumerate(simnumber):
-#       filename = "/home/ubuntu/cosmo_volume/cosmo_GNN/Data/" + sim
-#       # Read Fof
-#       FoF = readfof.FoF_catalog(
-#           filename,           # simulation file name
-#           2,                  # snapnum, indicating the redshift (z=1)
-#           long_ids = False,
-#           swap = False,
-#           SFR = False,
-#           read_IDs = False
-#           )
-#       # Get positions and masses
-#       pos = FoF.GroupPos/1e06             # Halo positions in Gpc/h 
-#       mass_raw = FoF.GroupMass * 1e10     # Halo masses in Msun/h#
-#       
-#       print('sto sortando frate \n')
-#       cut_val = np.min(np.delete(mass_raw, mass_raw.argmin()))
-#       if cut_val < cutmin:
-#           cutmin = cut_val
-#       
-#       
-#       #return cutmin
-#       return 3.2e14
-
-
-
-    
 
 # Routine to create a cosmic graph from a halo catalogue
 def sim_graph(simnumber, filename, paramsfile, hparams):
@@ -159,7 +124,7 @@ def sim_graph(simnumber, filename, paramsfile, hparams):
     # Get some hyperparameters
     r_link, pred_params = hparams.r_link, hparams.pred_params
 
-    # Read Fof
+    # Read Fof: pylians function to read the FoF generated halo catalogue
     FoF = readfof.FoF_catalog(
         filename,           # simulation file name
         2,                  # snapnum, indicating the redshift (z=1)
@@ -176,7 +141,7 @@ def sim_graph(simnumber, filename, paramsfile, hparams):
     # Mass cut
     cut_val = np.quantile(mass_raw,0.997)    # universal mass cut
     mass_mask = (mass_raw >= cut_val)
-    mass_mask = mass_mask.reshape(-1) # CHECK
+    mass_mask = mass_mask.reshape(-1)
     mass = mass_raw[mass_mask]  
     pos = pos[mass_mask]    
 
@@ -210,7 +175,6 @@ def sim_graph(simnumber, filename, paramsfile, hparams):
 def split_datasets(dataset):
 
     random.shuffle(dataset)
-
     num_train = len(dataset)
 
     # From split percentages get indexes
@@ -237,7 +201,7 @@ def create_dataset(hparams, verbose=False):
     simnumber = simnumber.astype(str).tolist()
 
     # True parameters
-    param_file = "/home/ubuntu/cosmo_volume/cosmo_GNN/latin_hypercube_params.txt" # CHECK
+    param_file = "/home/ubuntu/cosmo_volume/cosmo_GNN/latin_hypercube_params.txt"
     paramsfile = np.loadtxt(param_file, dtype=str)
 
     # Create dataset
@@ -254,17 +218,15 @@ def create_dataset(hparams, verbose=False):
         if verbose:
             print("Graph {0} Uploaded".format(numsim))
         
-    
-    
+
     masscuts = np.array(masscuts_list)
     quantiles = [0.025,0.5,0.975]
     quantile_points = np.quantile(masscuts, quantiles)
     mass_hist, mass_edges = np.histogram(a=masscuts, bins=80)
     bin_width = mass_edges[1] - mass_edges[0]
 
-    # PLOT MASSCUT
+    # Plot masscut distribution
     _, ax = plt.subplots(figsize=(12,8))
-    # ax.grid(linestyle='--',alpha=0.4)
     ax.grid(alpha=0.4)
     ax.hist(x=masscuts, bins=mass_edges, alpha = 0.6, zorder=1000)
     lims = plt.gca().get_ylim()
@@ -284,16 +246,12 @@ def create_dataset(hparams, verbose=False):
     plt.savefig("Plots/Masscuts.png", bbox_inches='tight', dpi=400)
     plt.close()
     
-    # number of halos in the dataset
+    # Number of halos in the dataset
     halos = np.array([graph.x.shape[0] for graph in dataset])
+    # Load Final outputs
     print(f"Total of halos in the dataset: {halos.sum(0)} \nMean of {halos.mean(0):.1f} halos per simulation \nStd of {halos.std(0):.1f} halos")
-
     print(f'number of halos in least massive graph: {halos.min()}')
-
     print('Total of graphs:', len(dataset))
-    
     print('Mean of masscut ',np.mean(np.array(masscuts)),'with std ',np.std(np.array(masscuts)))
     
-    
-
     return dataset
