@@ -2,8 +2,9 @@
 Estimation of cosmological parameter $\Omega_m$ from [Quijote simulations](https://quijote-simulations.readthedocs.io/en/latest/) using Graph Neural Networks.
 
 <p align="center">
-<img src="https://github.com/LauraRavagnani/CosmoGNN/assets/137277088/1227baa5-f036-4c44-b6da-3133325908b9" width=500>
+<img src="https://github.com/LauraRavagnani/CosmoGNN/assets/137277088/09bf91fb-1a7e-465a-a17b-23ba5f2db712" width=600>
 </p>
+
 
 ## Data
 The data used in this work can be retrieved from [globus](https://app.globus.org/file-manager?origin_id=e0eae0aa-5bca-11ea-9683-0e56c063f437&origin_path=%2F) following the path:
