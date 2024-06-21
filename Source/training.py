@@ -8,7 +8,6 @@ from Source.constants import *
 def train(loader, model, hparams, optimizer, scheduler):
 
     model.train()
-
     loss_tot = 0
 
     # Iterate in batches over the training dataset
@@ -52,7 +51,6 @@ def test(loader, model, hparams):
     loss_tot = 0
 
     # Iterate in batches over the training/test dat
-    # aset --> can be optimized for GPU
     for data in loader:  
         with torch.no_grad():
 
@@ -69,13 +67,12 @@ def test(loader, model, hparams):
             loss = torch.log(loss_mse) + torch.log(loss_lfi)
             
             # absolute error
-            err = (y_out - data.y)  / data.y  #/data.y --> CHECK
+            err = (y_out - data.y)  / data.y
             errs.append(np.abs(err.detach().cpu().numpy()).mean() )
 
             # chi2
             chi2 = (y_out - data.y)**2 / err_out**2
             chi2s.append((chi2.detach().cpu().numpy()).mean())
-            #chi2 = chi2s[chi2s < 1.e4].mean()
             
             loss_tot += loss.item()
 
@@ -97,18 +94,9 @@ def training_routine(model, train_loader, valid_loader, test_loader, hparams, ve
 
     # Define optimizer and learning rate scheduler
     optimizer = torch.optim.Adam(model.parameters(), lr=hparams.learning_rate, weight_decay=hparams.weight_decay)
-    # ----------- LR GRAVEYARD ------------
-    # scheduler = torch.optim.lr_scheduler.CyclicLR(optimizer, base_lr=hparams.learning_rate, max_lr=1.e-3, cycle_momentum=False)
-    # gamma = hparams.gamma_lr
-    # scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max = hparams.T_max, eta_min = 0, last_epoch = -1)
-    # scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-    #     optimizer, 
-    #     'min', 
-    #     threshold=0.05, 
-    #     threshold_mode = 'abs', 
-    #     verbose=True)
-
+    
+    # initializing losses and errors 
     train_losses, valid_losses, test_losses, chi2s = [], [], [], []
     valid_loss_min, err_min = 1000., 1000.
     chi2_min = 1e6
@@ -122,20 +110,14 @@ def training_routine(model, train_loader, valid_loader, test_loader, hparams, ve
 
         train_losses.append(train_loss)
         valid_losses.append(valid_loss)
-        # test_losses.append(test_loss)
         chi2s.append(chi2)
 
-        # Save model if it has improved --> CHECK
+        # Save model if it has improved 
         if valid_loss <= valid_loss_min:
             if verbose: print("Validation loss decreased ({:.2e} --> {:.2e}).  Saving model ...".format(valid_loss_min,valid_loss)) # PERCHE' QUI METTE LA TEST LOSS??
             torch.save(model.state_dict(), "Models/best_model_from_training")
             valid_loss_min = valid_loss
             err_min = err
-
-        #if chi2 <= chi2_min :
-        #   if verbose: print("Chi2 from validation decreased")
-        #   torch.save(model.state_dict(), "Models/best_model_from_training")
-        #   chi2_min = chi2
 
         if verbose: print(f'Epoch: {epoch:03d}, Train Loss: {train_loss:.2e}, Validation Loss: {valid_loss:.2e}, Error: {err:.2e}')
 
