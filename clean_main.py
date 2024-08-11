@@ -1,3 +1,18 @@
+
+#++++++++++++++++++++++++++++++++++++#
+#+ LCP mod B project                +#
+#+                                  +#
+#+ Authors:                         +#
+#+      Lorenzo Cavezza             +#
+#+      Giulia Doda                 +#
+#+      Giacomo Longaroni           +#
+#+      Laura Ravagnani             +#
+#+                                  +#  
+#+ Original code from:              +#
+#+      Pablo Villanueva Domingo    +#
+#+                                  +#
+#++++++++++++++++++++++++++++++++++++#
+
 import time, datetime, psutil
 
 from Source.metalayer import *
@@ -20,8 +35,6 @@ def set_seed(seed):
 
 # Main routine to train the neural net
 def main(hparams, verbose = True):
-
-    hparams.n_epochs = 400
 
     # Ignore unnecessary warnings
     warnings.filterwarnings("ignore")
@@ -56,6 +69,13 @@ def main(hparams, verbose = True):
     if verbose: print("\n--- Training ---\n")
     train_losses, valid_losses, chi2s = training_routine(model, train_loader, valid_loader, test_loader, hparams, verbose)
 
+    # Saving train and validation losses
+    current = datetime.datetime.now()
+    day = current.strftime("%d")
+    current_time = current.strftime("%H_%M")
+    np.save("Outputs/Losses/train_loss_"+day+"_"+current_time, train_losses)
+    np.save("Outputs/Losses/val_loss_"+day+"_"+current_time, valid_losses)
+
     # Test the model
     testing = True
     if testing:
@@ -89,14 +109,18 @@ if __name__ == "__main__":
     with open(fname, 'rb') as file:
         best_hparams = pickle.load(file)
 
-    main(best_hparams)
+    # Changing training epochs
+    best_hparams.n_epochs = 350
 
     # print hparams
-    print('\nBest hyperparameters:')
+    print('\nHyperparameters:')
     print('\tlearnig_rate: {}'.format(best_hparams.learning_rate))
     print('\tT_max: {}'.format(best_hparams.T_max))
     print('\tweight_decay: {}'.format(best_hparams.weight_decay))
     print('\tn_layers: {}'.format(best_hparams.n_layers))
     print('\thidden_channels: {}'.format(best_hparams.hidden_channels))
+    print('\tnumber of epochs: {}'.format(best_hparams.n_epochs))
+
+    main(best_hparams)
 
     print("Finished. Time elapsed:",datetime.timedelta(seconds=time.time()-time_ini))

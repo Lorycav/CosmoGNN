@@ -3,18 +3,25 @@
 import time, datetime, os
 from Source.plotting import *
 from Source.load_data import *
-from torch_geometric.utils import degree
 from cluster_radius import radius_graph
 import readfof
+from matplotlib.ticker import ScalarFormatter
 
 
-fontsize = 11
+fontsize = 12
+
+# colors
+col_1 = '#648FFF'
+col_2 = '#785EF0'
+col_3 = '#DC267F'
+col_4 = '#FE6100'
+col_5 = '#FFB000'
 
 
 # Visualization routine for plotting graphs
 def visualize_graph(num, data, masses, projection="3d", edge_index=None):
 
-    fig = plt.figure(figsize=(12, 8))
+    fig = plt.figure(figsize=(12, 12))
 
     if projection=="3d":
         ax = fig.add_subplot(projection ="3d")
@@ -49,50 +56,24 @@ def visualize_graph(num, data, masses, projection="3d", edge_index=None):
     ax.yaxis.set_tick_params(labelsize=fontsize)
     ax.zaxis.set_tick_params(labelsize=fontsize)
 
-    ax.set_xlabel('x (Mpc)')
-    ax.set_ylabel('y (Mpc)')
-    ax.set_zlabel('z (Mpc)')
+    ax.set_xlabel('x (Mpc)', fontsize=16, labelpad=15)
+    ax.set_ylabel('y (Mpc)', fontsize=16, labelpad=15)
+    ax.set_zlabel('z (Mpc)', fontsize=16, labelpad=15)
 
     param_file = "/home/ubuntu/cosmo_volume/cosmo_GNN/latin_hypercube_params.txt" 
     paramsfile = np.loadtxt(param_file, dtype=str)
 
-    ax.set_title(f'Graph for simulation n°{num}, $\\Omega_m = {float(paramsfile[int(num), 0]):.3e}$, mass cut: 99.8%')
+    rl = '$R_{link} = 0.2$'
 
-    fig.savefig("Plots/Graphs/graph_"+num+"fixed_masscut.png", bbox_inches='tight', dpi=400)
+    ax.set_title(f'\tGraph n°{num}, Masses $\\geq 99.6$% percentile, {rl} Mpc \t \n \n $\\Omega_m = {float(paramsfile[int(num), 0]):.3f}$ \t $\\sigma_8 = {float(paramsfile[int(num), 1]):.3f}$', fontsize=20)
+
+    fig.savefig("Plots/Graphs/graph_"+num+"_996.png", bbox_inches='tight', pad_inches=0.6, dpi=400)
     plt.close(fig)
 
 
 
-# Plot the degree distribution of the graph (see e.g. http://networksciencebook.com/)
-def plot_degree_distribution(degrees):
-
-    listbins = np.linspace(0,80,num=12)
-    deg_dist = []
-
-    for array in degrees:
-        hist, bins = np.histogram(array, bins=listbins)
-        deg_dist.append(hist)
-
-    dist_mean = np.mean(deg_dist,axis=0)
-    dist_std = np.std(deg_dist,axis=0)
-
-    fig_deg, ax_deg = plt.subplots(figsize=(6, 4))
-
-    ax_deg.set_yscale("log")
-    # ax_deg.set_xscale("log")
-    ax_deg.plot(bins[:-1], dist_mean)
-    ax_deg.fill_between(bins[:-1], dist_mean+dist_std, dist_mean-dist_std, alpha=0.3)
-    ax_deg.set_xlim([bins[0],bins[-2]])
-    ax_deg.set_xlabel(r"$k$")
-    ax_deg.set_ylabel(r"$p_k$")
-
-    fig_deg.savefig("Plots/degree_distribution.pdf", bbox_inches='tight', dpi=300)
-
 # Main routine to display graphs from several simulations
-def display_graphs(n_sims, r_link, showgraph=True, get_degree=False):
-
-    if get_degree:
-        degrees = []
+def display_graphs(n_sims, r_link, showgraph=True):
 
     # Load data and create graph
     for simnumber in range(n_sims):
@@ -102,7 +83,8 @@ def display_graphs(n_sims, r_link, showgraph=True, get_degree=False):
         pos  = FoF.GroupPos / 1e6            # Halo positions in Mpc/h
         mass_raw = FoF.GroupMass * 1e10          # Halo masses in Msun/h
 
-        cut_val = 3.5e14    # universal mass cut
+        # cut_val = 3.5e14    # universal mass cut
+        cut_val = np.quantile(mass_raw, 0.996)    # NOT universal mass cut
         mass_mask = (mass_raw >= cut_val)
         mass_mask = mass_mask.reshape(-1)
         mass=mass_raw[mass_mask]
@@ -119,13 +101,60 @@ def display_graphs(n_sims, r_link, showgraph=True, get_degree=False):
             # visualize_graph(data, simnumber, "2d", edge_index)
             visualize_graph(str(simnumber), data, mass, projection="3d", edge_index=data.edge_index)
 
-        if get_degree:
-            degrees.append( degree(edge_index[0], data.num_nodes).numpy() )
 
-    if get_degree:
-        plot_degree_distribution(degrees)
+# Show mass distribution for each simulation
+def mass_distr(n_sims):
 
+    # Load data and create graph
+    for simnumber in range(n_sims):
+        simpath = "/home/ubuntu/cosmo_volume/cosmo_GNN/Data/" + str(simnumber)
+        FoF = readfof.FoF_catalog(simpath, 2, long_ids=False,
+                          swap=False, SFR=False, read_IDs=False)
+        mass_raw = FoF.GroupMass * 1e10          # Halo masses in Msun/h
 
+        param_file = "/home/ubuntu/cosmo_volume/cosmo_GNN/latin_hypercube_params.txt" 
+        paramsfile = np.loadtxt(param_file, dtype=str)
+
+        mass_max = np.max(mass_raw)
+        binwidth = 1e13
+        bins = np.arange(0, mass_max + binwidth, binwidth)
+
+        nhalos = mass_raw.shape[0]
+
+        fig, ax = plt.subplots(figsize=(10,6))
+        ax.grid(alpha=0.4, linestyle='--')
+
+        cut_val97 = np.quantile(mass_raw,0.997)
+        cut_val98 = np.quantile(mass_raw,0.998)
+        cut_val99 = np.quantile(mass_raw,0.999)
+
+        ax.hist(mass_raw, bins=bins, color = col_2, alpha=0.65, label = 'Mass distribution', zorder=100)
+        ax.axvline(cut_val97, ymin=0, ymax=20000, color = col_3, linewidth=1.8, label='99.7% percentile', zorder=200, linestyle = '-')
+        ax.axvline(cut_val98, ymin=0, ymax=20000, color = col_4, linewidth=1.8, label='99.8% percentile', zorder=200, linestyle = '--')
+        ax.axvline(cut_val99, ymin=0, ymax=20000, color = col_5, linewidth=1.8, label='99.9% percentile', zorder=200, linestyle = '-.')
+
+        ax.set_xlabel('Halo mass ($M_{\\odot}$)', fontsize=14)
+        modot = '$M_{\\odot}$'
+        ax.set_ylabel('Counts  /  $10^{13}$ '+modot, fontsize=14)
+
+        ax.legend(fontsize=14, loc='upper right', edgecolor='black', title=f'Graph n°{simnumber}', title_fontsize=15)
+
+        nh = f'{nhalos} halos \n $\\Omega_m = {float(paramsfile[int(simnumber), 0]):.3f}$ \n $\\sigma_8 = {float(paramsfile[int(simnumber), 1]):.3f}$'
+
+        ax.text(0.75, 0.485, nh, transform=ax.transAxes, fontsize=14, bbox=dict(boxstyle="round,pad=0.3", edgecolor="black", facecolor="white"))
+
+        ax.set_yscale('log')
+        _, right = plt.xlim()
+        ax.set_xlim(0, right)
+
+        ax.xaxis.set_tick_params(labelsize=12)
+        ax.yaxis.set_tick_params(labelsize=12)
+
+        ax.xaxis.set_major_formatter(ScalarFormatter(useMathText=True))
+        ax.xaxis.get_offset_text().set_fontsize(12)
+        ax.ticklabel_format(axis="x", style="scientific", scilimits=(0,0))
+
+        fig.savefig('Plots/MassDistr/mass_distr_'+str(simnumber)+'.png', bbox_inches='tight', dpi=400)
 
 
 # --- MAIN ---#
@@ -140,8 +169,9 @@ if __name__=="__main__":
 
     # Linking radius
     r_link = 0.2
-    n_sims = 4
+    n_sims = 20
 
-    display_graphs(n_sims, r_link)
+    # display_graphs(n_sims, r_link)
+    mass_distr(n_sims)
 
     print("Finished. Time elapsed:",datetime.timedelta(seconds=time.time()-time_ini))
