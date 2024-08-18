@@ -20,7 +20,7 @@ else:
 # Reduced Hubble constant
 hred = 0.7
 
-# Box size in comoving kpc/h --> CHECK
+# Box size in comoving kpc/h 
 boxsize = 1.e6
 
 # Validation and test size

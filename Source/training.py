@@ -114,7 +114,7 @@ def training_routine(model, train_loader, valid_loader, test_loader, hparams, ve
 
         # Save model if it has improved 
         if valid_loss <= valid_loss_min:
-            if verbose: print("Validation loss decreased ({:.2e} --> {:.2e}).  Saving model ...".format(valid_loss_min,valid_loss)) # PERCHE' QUI METTE LA TEST LOSS??
+            if verbose: print("Validation loss decreased ({:.2e} --> {:.2e}).  Saving model ...".format(valid_loss_min,valid_loss)) 
             torch.save(model.state_dict(), "Models/best_model_from_training")
             valid_loss_min = valid_loss
             err_min = err

@@ -1,5 +1,5 @@
 # +
-#Routine for loading the QUIJOTE halos LH catalogues
+# Routine for loading the QUIJOTE halos LH catalogues
 # -
 
 import h5py
@@ -10,6 +10,8 @@ from Source.plotting import *
 import scipy.spatial as SS
 import readfof
 import pickle
+from matplotlib.ticker import ScalarFormatter
+
 
 # Normalize QUIJOTE parameters
 def normalize_params(params):
@@ -29,7 +31,7 @@ def get_edges(pos, r_link):
 
     # Create the KDTree and look for pairs within a distance r_link (clustering phase)
 
-    # Boxsize normalize to 1
+    # Boxsize normalized to 1
     kd_tree = SS.KDTree(
         pos,                # data 
         leafsize = 16,      # threshold at which the algorithm stops splitting 
@@ -79,7 +81,7 @@ def get_edges(pos, r_link):
     # Centroid of halo catalogue (3d position of the centroid)
     centroid = np.mean(pos,axis=0)
 
-    # Vectors of node and neighbor
+    # Vectors of node and neighbor --> ??
     # distance between each point and the centroid
     row = (pos[row] - centroid)
     col = (pos[col] - centroid)
@@ -113,7 +115,8 @@ def get_edges(pos, r_link):
         loops[0,i], loops[1,i] = i, i
         atrloops[i,0], atrloops[i,1], atrloops[i,2] = 0., 1., 0.
     edge_index = np.append(edge_index, loops, 1)
-    edge_attr = np.append(edge_attr, atrloops, 0)  
+    edge_attr = np.append(edge_attr, atrloops, 0)
+    
     edge_index = edge_index.astype(int)
 
     return edge_index, edge_attr
@@ -124,7 +127,7 @@ def sim_graph(simnumber, filename, paramsfile, hparams):
     # Get some hyperparameters
     r_link, pred_params = hparams.r_link, hparams.pred_params
 
-    # Read Fof: pylians function to read the FoF generated halo catalogue
+    # Read Fof
     FoF = readfof.FoF_catalog(
         filename,           # simulation file name
         2,                  # snapnum, indicating the redshift (z=1)
@@ -141,7 +144,7 @@ def sim_graph(simnumber, filename, paramsfile, hparams):
     # Mass cut
     cut_val = np.quantile(mass_raw,0.997)    # universal mass cut
     mass_mask = (mass_raw >= cut_val)
-    mass_mask = mass_mask.reshape(-1)
+    mass_mask = mass_mask.reshape(-1) # CHECK
     mass = mass_raw[mass_mask]  
     pos = pos[mass_mask]    
 
@@ -175,6 +178,7 @@ def sim_graph(simnumber, filename, paramsfile, hparams):
 def split_datasets(dataset):
 
     random.shuffle(dataset)
+
     num_train = len(dataset)
 
     # From split percentages get indexes
@@ -201,7 +205,7 @@ def create_dataset(hparams, verbose=False):
     simnumber = simnumber.astype(str).tolist()
 
     # True parameters
-    param_file = "/home/ubuntu/cosmo_volume/cosmo_GNN/latin_hypercube_params.txt"
+    param_file = "/home/ubuntu/cosmo_volume/cosmo_GNN/latin_hypercube_params.txt" # CHECK
     paramsfile = np.loadtxt(param_file, dtype=str)
 
     # Create dataset
@@ -218,40 +222,62 @@ def create_dataset(hparams, verbose=False):
         if verbose:
             print("Graph {0} Uploaded".format(numsim))
         
-
+    
+    
     masscuts = np.array(masscuts_list)
     quantiles = [0.025,0.5,0.975]
     quantile_points = np.quantile(masscuts, quantiles)
     mass_hist, mass_edges = np.histogram(a=masscuts, bins=80)
     bin_width = mass_edges[1] - mass_edges[0]
 
-    # Plot masscut distribution
-    _, ax = plt.subplots(figsize=(12,8))
-    ax.grid(alpha=0.4)
-    ax.hist(x=masscuts, bins=mass_edges, alpha = 0.6, zorder=1000)
+    # PLOT MASSCUT
+    col_1 = '#648FFF'
+    col_2 = '#785EF0'
+    col_3 = '#DC267F'
+    col_4 = '#FE6100'
+    col_5 = '#FFB000'
+
+    _, ax = plt.subplots(figsize=(10,6))
+    ax.grid(alpha=0.4, linestyle='--')
+    
+    ax.hist(x=masscuts, bins=mass_edges, alpha = 0.5, label='Masscuts distribution', color = col_1)
     lims = plt.gca().get_ylim()
-    ax.vlines(quantile_points, lims[0], lims[1], color='red',linestyle='--', zorder=1000)
+    ax.vlines(quantile_points, lims[0], lims[1], color=col_3, linestyle='--')
     maxim = mass_edges[np.argmax(mass_hist)]+bin_width*0.5
-    ax.vlines(maxim, lims[0], lims[1], color='darkblue', zorder=1000)
+    ax.vlines(maxim, lims[0], lims[1], color=col_2)
     ax.set_ylim(lims[0],lims[1])
     for i, x in enumerate(quantile_points):
-        plt.text(x-1e13, -5, "{0} %".format(quantiles[i]*100), rotation=0,color='darkblue')
-        plt.text(x-1e13, -3.5, "{0}".format(round(x/1e14,2)), rotation=0,color='darkred')
-        plt.text(maxim-1e13, -3.5, "{0}".format(round(maxim/1e14,2)), rotation=0,color='darkred')
-        plt.text(maxim-1e13, -5, "MAX", rotation=0,color='darkblue')
+        plt.text(x-1e13, -7.5, "{0} %".format(quantiles[i]*100), rotation=0, color=col_3)
+        plt.text(x-1e13, -5.2, "{0}".format(round(x/1e14,2)), rotation=0, color=col_3)
+        plt.text(maxim-1e13, -5.2, "{0}".format(round(maxim/1e14,2)), rotation=0,color=col_2)
+        plt.text(maxim-1e13, -7.5, "MAX", rotation=0, color=col_2)
 
-    ax.set_ylabel('Counts')
-    ax.set_xlabel('Masscut ($M_{\odot}$)')
-    ax.set_title('Masscuts Distribution', fontsize=20)
+    ax.set_ylabel(f'Counts  /  {bin_width/1e12:.0f} '+'$\\times 10^{12}$ $M_{\odot}$', fontsize=14)
+    ax.set_xlabel('Masscut ($M_{\odot}$)', fontsize=14, labelpad=25)
+    # ax.set_title('Masscuts Distribution', fontsize=20)
+    _, right = plt.xlim()
+    ax.set_xlim(0, right)
+    ax.legend(fontsize=14, facecolor='white')
+    ax.xaxis.set_tick_params(labelsize=12)
+    ax.yaxis.set_tick_params(labelsize=12)
+
+    ax.xaxis.set_major_formatter(ScalarFormatter(useMathText=True))
+    ax.xaxis.get_offset_text().set_fontsize(12)
+    ax.ticklabel_format(axis="x", style="scientific", scilimits=(0,0))
+
     plt.savefig("Plots/Masscuts.png", bbox_inches='tight', dpi=400)
     plt.close()
     
-    # Number of halos in the dataset
+    # number of halos in the dataset
     halos = np.array([graph.x.shape[0] for graph in dataset])
-    # Load Final outputs
     print(f"Total of halos in the dataset: {halos.sum(0)} \nMean of {halos.mean(0):.1f} halos per simulation \nStd of {halos.std(0):.1f} halos")
+
     print(f'number of halos in least massive graph: {halos.min()}')
+
     print('Total of graphs:', len(dataset))
+    
     print('Mean of masscut ',np.mean(np.array(masscuts)),'with std ',np.std(np.array(masscuts)))
     
+    
+
     return dataset

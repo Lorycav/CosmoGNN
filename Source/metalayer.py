@@ -1,5 +1,5 @@
 # +
-#Graph Neural Network architecture
+# Graph Neural Network architecture
 # -
 
 import torch
