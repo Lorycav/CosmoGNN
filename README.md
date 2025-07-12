@@ -4,6 +4,9 @@ Estimation of cosmological parameter $\Omega_m$ from [Quijote simulations](https
 <p align="center">
 <img src="https://github.com/LauraRavagnani/CosmoGNN/assets/137277088/09bf91fb-1a7e-465a-a17b-23ba5f2db712" width=600>
 </p>
+<p align="center">
+<img src="./Plots/true_vs_pred.png" width=600>
+</p>
 
 
 ## Data
